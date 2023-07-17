@@ -1,104 +1,187 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
+#include "Color.cpp"
+#include "Vertex.cpp"
 
 class Framebuffer {
-private:
-    static const int WIDTH = 800;  // Width of the framebuffer
-    static const int HEIGHT = 600; // Height of the framebuffer
-    static const int BYTES_PER_PIXEL = 3; // Number of bytes per pixel (assuming RGB)
-
-    std::vector<uint8_t> framebuffer; // The framebuffer vector
-
 public:
-    Framebuffer() : framebuffer(WIDTH * HEIGHT * BYTES_PER_PIXEL, 0) {}
+  Framebuffer(int width, int height, const Color &clearColor);
+  Color &getPixel(int x, int y);
+  void point(const Vertex &vertex, const Color &currentColor);
+  void clear(const Color &clearColor);
+  void renderBuffer();
+  void line(const Vertex &p0, const Vertex &p1, const Color &currentColor);
+  void createPolygon(const std::vector<Vertex> &vertices, const Color &currentColor);
+  void fillPolygon(const std::vector<Vertex> &vertices, const Color &currentColor);
 
-    void clear() {
-        // Fill the framebuffer with black color (RGB: 0, 0, 0)
-        std::fill(framebuffer.begin(), framebuffer.end(), 0);
-    }
-
-    void renderBuffer() {
-        // Create a .bmp file and write the framebuffer data into it
-
-        // Define the BMP file header
-        struct BMPHeader {
-            uint16_t signature;   // BMP signature ("BM")
-            uint32_t fileSize;    // Size of the BMP file
-            uint32_t reserved;    // Reserved, set to 0
-            uint32_t dataOffset;  // Offset to the pixel data
-            uint32_t headerSize;  // Size of the header (40 bytes for BITMAPINFOHEADER)
-            int32_t width;        // Width of the image
-            int32_t height;       // Height of the image
-            uint16_t planes;      // Number of color planes (always 1)
-            uint16_t bpp;         // Bits per pixel (24 bits for RGB)
-            uint32_t compression; // Compression method (0 for uncompressed)
-            uint32_t dataSize;    // Size of the pixel data
-            int32_t hResolution;  // Horizontal resolution (pixels per meter)
-            int32_t vResolution;  // Vertical resolution (pixels per meter)
-            uint32_t colors;      // Number of colors in the color palette (0 for no palette)
-            uint32_t importantColors; // Number of important colors (0 when every color is important)
-        };
-
-        // Calculate the size of the pixel data
-        uint32_t rowSize = WIDTH * BYTES_PER_PIXEL;
-        uint32_t paddingSize = (4 - (rowSize % 4)) % 4;
-        uint32_t dataSize = (rowSize + paddingSize) * HEIGHT;
-
-        // Calculate the total file size
-        uint32_t fileSize = sizeof(BMPHeader) + dataSize;
-
-        // Create the BMP file header
-        BMPHeader header;
-        header.signature = 0x4D42; // BM
-        header.fileSize = fileSize;
-        header.reserved = 0;
-        header.dataOffset = sizeof(BMPHeader);
-        header.headerSize = 40; // Size of BITMAPINFOHEADER
-        header.width = WIDTH;
-        header.height = HEIGHT;
-        header.planes = 1;
-        header.bpp = BYTES_PER_PIXEL * 8;
-        header.compression = 0;
-        header.dataSize = dataSize;
-        header.hResolution = 0;
-        header.vResolution = 0;
-        header.colors = 0;
-        header.importantColors = 0;
-
-        // Open the file for writing in binary mode
-        std::ofstream file("output.bmp", std::ios::binary);
-
-        // Write the BMP file header
-        file.write(reinterpret_cast<char*>(&header), sizeof(BMPHeader));
-
-        // Generate a simple test pattern in the framebuffer
-        for (int y = 0; y < HEIGHT; ++y) {
-            for (int x = 0; x < WIDTH; ++x) {
-                int index = y * WIDTH + x;
-                uint8_t red = (x * 255) / (WIDTH - 1);
-                uint8_t green = (y * 255) / (HEIGHT - 1);
-                uint8_t blue = 128;
-
-                framebuffer[index * BYTES_PER_PIXEL] = blue;
-                framebuffer[index * BYTES_PER_PIXEL + 1] = green;
-                framebuffer[index * BYTES_PER_PIXEL + 2] = red;
-            }
-        }
-
-        // Write the pixel data
-        for (int y = HEIGHT - 1; y >= 0; --y) {
-            file.write(reinterpret_cast<char*>(framebuffer.data() + (y * rowSize)), rowSize);
-            // Write padding bytes if necessary
-            for (int p = 0; p < paddingSize; ++p) {
-                file.put(0);
-            }
-        }
-
-        // Close the file
-        file.close();
-
-        std::cout << "Framebuffer rendered to output.bmp." << std::endl;
-    }
+private:
+  int width;
+  int height;
+  std::vector<Color> pixels;
+  bool isValidCoordinate(int x, int y);
+  bool isInsidePolygon(int x, int y, const std::vector<Vertex> &vertices);
+  void writeBmpHeader(std::ofstream &file);
 };
 
+Framebuffer::Framebuffer(int width, int height, const Color &clearColor) : width(width), height(height), pixels(width * height, clearColor){}
+
+Color &Framebuffer::getPixel(int x, int y) {
+  return pixels[y * width + x];
+}
+
+void Framebuffer::point(const Vertex &vertex, const Color &currentColor) {
+  if (isValidCoordinate(vertex.x, vertex.y)) {
+    int index = vertex.y * width + vertex.x;
+    pixels[index] = currentColor;
+  }
+}
+
+void Framebuffer::clear(const Color &clearColor) {
+  std::fill(pixels.begin(), pixels.end(), clearColor);
+}
+
+void Framebuffer::renderBuffer() {
+  std::ofstream file("out.bmp", std::ios::binary);
+
+  // Write BMP header
+  writeBmpHeader(file);
+
+  // Write pixel data
+  for (const auto &color : pixels) {
+    // Write color components in BGR order
+    file.put(color.getBlue());
+    file.put(color.getGreen());
+    file.put(color.getRed());
+  }
+
+  file.close();
+}
+
+void Framebuffer::line(const Vertex &p0, const Vertex &p1, const Color &currentColor) {
+  int x0 = p0.x;
+  int y0 = p0.y;
+  int x1 = p1.x;
+  int y1 = p1.y;
+
+  int dx = std::abs(x1 - x0);
+  int dy = std::abs(y1 - y0);
+
+  int sx = (x0 < x1) ? 1 : -1;
+  int sy = (y0 < y1) ? 1 : -1;
+
+  int err = dx - dy;
+
+  while (x0 != x1 || y0 != y1) {
+    Vertex current{x0, y0};
+    point(current, currentColor);
+
+    int err2 = 2 * err;
+    if (err2 > -dy)
+    {
+      err -= dy;
+      x0 += sx;
+    }
+    if (err2 < dx)
+    {
+      err += dx;
+      y0 += sy;
+    }
+  }
+}
+
+void Framebuffer::createPolygon(const std::vector<Vertex> &vertices, const Color &currentColor) {
+  for (int i = 0; i < vertices.size() - 1; i++) {
+    line(vertices[i], vertices[i + 1], currentColor);
+  }
+  line(vertices[vertices.size() - 1], vertices[0], currentColor);
+}
+
+void Framebuffer::fillPolygon(const std::vector<Vertex> &vertices, const Color &fillColor) {
+  // Find the bounding box of the polygon
+  int minX = width;
+  int maxX = 0;
+  int minY = height;
+  int maxY = 0;
+
+  for (const auto &vertex : vertices) {
+    minX = std::min(minX, vertex.x);
+    maxX = std::max(maxX, vertex.x);
+    minY = std::min(minY, vertex.y);
+    maxY = std::max(maxY, vertex.y);
+  }
+
+  // Iterate over each pixel within the bounding box
+  for (int y = minY; y <= maxY; ++y) {
+    for (int x = minX; x <= maxX; ++x) {
+      // Check if the current pixel is inside the polygon
+      if (isInsidePolygon(x, y, vertices)) {
+        point({x, y}, fillColor);
+      }
+    }
+  }
+}
+
+bool Framebuffer::isInsidePolygon(int x, int y, const std::vector<Vertex> &vertices) {
+  int numVertices = vertices.size();
+  bool inside = false;
+
+  for (int i = 0, j = numVertices - 1; i < numVertices; j = i++) {
+    if (((vertices[i].y > y) != (vertices[j].y > y)) && (x < (vertices[j].x - vertices[i].x) * (y - vertices[i].y) / (vertices[j].y - vertices[i].y) + vertices[i].x)) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+bool Framebuffer::isValidCoordinate(int x, int y) {
+  return x >= 0 && x < width && y >= 0 && y < height;
+}
+
+void Framebuffer::writeBmpHeader(std::ofstream &file) {
+  // BMP header structure
+  #pragma pack(push, 1) // Ensure struct is tightly packed
+  struct BitmapHeader {
+    uint16_t type;
+    uint32_t size;
+    uint16_t reserved1;
+    uint16_t reserved2;
+    uint32_t offset;
+    uint32_t headerSize;
+    int32_t width;
+    int32_t height;
+    uint16_t planes;
+    uint16_t bitDepth;
+    uint32_t compression;
+    uint32_t imageSize;
+    int32_t xPixelsPerMeter;
+    int32_t yPixelsPerMeter;
+    uint32_t totalColors;
+    uint32_t importantColors;
+  };
+#pragma pack(pop) // Restore previous packing setting
+
+  BitmapHeader header;
+  std::memset(&header, 0, sizeof(BitmapHeader));
+
+  header.type = 0x4D42; // BM
+  header.size = sizeof(BitmapHeader) + pixels.size() * 3; // 3 bytes per pixel
+  header.offset = sizeof(BitmapHeader);
+  header.headerSize = sizeof(BitmapHeader) - 14; // subtracting the size of the common fields
+  header.width = width;
+  header.height = height;
+  header.planes = 1;
+  header.bitDepth = 24;
+  header.compression = 0;
+  header.imageSize = width * height * 3; // 3 bytes per pixel
+  header.xPixelsPerMeter = 2835; // 72 dpi
+  header.yPixelsPerMeter = 2835; // 72 dpi
+  header.totalColors = 0;
+  header.importantColors = 0;
+
+  file.write(reinterpret_cast<const char *>(&header), sizeof(BitmapHeader));
+}
