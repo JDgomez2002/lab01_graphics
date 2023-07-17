@@ -3,10 +3,7 @@ using namespace std;
 
 class Color {
   public:
-    int red;
-    int green;
-    int blue;
-    Color() : red(0), green(0), blue(0) {}
+    // Color() : red(0), green(0), blue(0) {}
     Color(int r, int g, int b);
 
     int getRed() const {
@@ -20,6 +17,11 @@ class Color {
     int getBlue() const {
         return blue;
     }
+
+  private:
+    int red;
+    int green;
+    int blue;
 };
 
 int colorClamping(int value){
@@ -41,17 +43,17 @@ Color::Color(int r, int g, int b){
 }
 
 Color colorAddition(Color a, Color b) {
-  int newRed = colorClamping(a.red + b.red);
-  int newGreen = colorClamping(a.green + b.green);
-  int newBlue = colorClamping(a.blue + b.blue);
+  int newRed = colorClamping(a.getRed() + b.getRed());
+  int newGreen = colorClamping(a.getGreen() + b.getGreen());
+  int newBlue = colorClamping(a.getBlue() + b.getBlue());
   Color newColor(newRed, newGreen, newBlue);
   return newColor;
 }
 
 Color floatTimesColor(float n, Color color){
-  int newRed = colorClamping(static_cast<int> (n * color.red));
-  int newGreen = colorClamping(static_cast<int> (n * color.green));
-  int newBlue = colorClamping(static_cast<int> (n * color.blue));
+  int newRed = colorClamping(static_cast<int> (n * color.getRed()));
+  int newGreen = colorClamping(static_cast<int> (n * color.getGreen()));
+  int newBlue = colorClamping(static_cast<int> (n * color.getBlue()));
   Color newColor(newRed, newGreen, newBlue);
   return newColor;
 }
