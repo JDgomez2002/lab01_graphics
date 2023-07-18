@@ -14,16 +14,16 @@ const Color clearColor = Color(0,0,0);
 
 void render(Framebuffer &framebuffer) {
   const Color white = Color(255, 255, 255);
+  const Color red = Color(255, 0, 0);
 
-  std::vector<Vertex> polygon = {
-    {321, 335},
-    {521, 335},
-    {521, 135},
-    {321, 135},
+  std::vector<Vertex> polygon3 = {
+    {377, 249},
+    {411, 197},
+    {436, 249}
   };
 
-  framebuffer.createPolygon(polygon, white);
-  framebuffer.fillPolygon(polygon, white);
+  framebuffer.createPolygon(polygon3, white);
+  framebuffer.fillPolygon(polygon3, red);
 
   framebuffer.renderBuffer();
 }
