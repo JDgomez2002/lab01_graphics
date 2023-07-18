@@ -14,11 +14,13 @@ const Color clearColor = Color(0,0,0);
 
 void render(Framebuffer &framebuffer) {
   const Color white = Color(255, 255, 255);
+  const Color green = Color(0, 255, 0);
+  const Color black = Color(0, 0, 0);
   const Color red = Color(255, 0, 0);
   const Color yellow = Color(255, 255, 0);
   const Color blue = Color(0, 0, 255);
 
-  std::vector<Vertex> p1 = {
+  std::vector<Vertex> polygon1 = {
     {165, 380},
     {185, 360},
     {180, 330},
@@ -31,7 +33,7 @@ void render(Framebuffer &framebuffer) {
     {193, 383}
   };
 
-  std::vector<Vertex> p2 = {
+  std::vector<Vertex> polygon2 = {
     {321, 335},
     {288, 286},
     {339, 251},
@@ -44,14 +46,48 @@ void render(Framebuffer &framebuffer) {
     {436, 249}
   };
 
-  framebuffer.createPolygon(p1, white);
-  framebuffer.fillPolygon(p1, yellow);
+  std::vector<Vertex> polygon4 = {
+    {413, 177},
+    {448, 159},
+    {502, 88},
+    {553, 53},
+    {535, 36},
+    {676, 37},
+    {660, 52},
+    {750, 145},
+    {761, 179},
+    {672, 192},
+    {659, 214},
+    {615, 214},
+    {632, 230},
+    {580, 230},
+    {597, 215},
+    {552, 214},
+    {517, 144},
+    {466, 180}
+  };
 
-  framebuffer.createPolygon(p2, white);
-  framebuffer.fillPolygon(p2, blue);
+  std::vector<Vertex> polygon5 = {
+    {682, 175},
+    {708, 120},
+    {735, 148},
+    {739, 170}
+  };
+
+  framebuffer.createPolygon(polygon1, white);
+  framebuffer.fillPolygon(polygon1, yellow);
+
+  framebuffer.createPolygon(polygon2, white);
+  framebuffer.fillPolygon(polygon2, blue);
 
   framebuffer.createPolygon(polygon3, white);
   framebuffer.fillPolygon(polygon3, red);
+
+  framebuffer.createPolygon(polygon4, white);
+  framebuffer.fillPolygon(polygon4, green);
+  
+  framebuffer.createPolygon(polygon5, white);
+  framebuffer.fillPolygon(polygon5, black);
 
   framebuffer.renderBuffer();
 }
